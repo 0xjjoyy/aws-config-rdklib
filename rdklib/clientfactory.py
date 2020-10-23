@@ -22,6 +22,20 @@ class ClientFactory:
     def __init__(self, role_arn):
         self.__role_arn = role_arn
 
+    def build_resource(self, service):
+        if not self.__role_arn:
+            raise Exception("No Role ARN - ClientFactory must be initialized before build_resource is called.")
+
+        # Check to see if we have already gotten STS credentials for this role.  If not, get them now and then save them for later use.
+        if not self.__sts_credentials:
+            self.__sts_credentials = get_assume_role_credentials(self.__role_arn)
+
+        # Use the credentials to get a new boto3 resource for the appropriate service.
+        return boto3.resource(service,
+                            aws_access_key_id=self.__sts_credentials['AccessKeyId'],
+                            aws_secret_access_key=self.__sts_credentials['SecretAccessKey'],
+                            aws_session_token=self.__sts_credentials['SessionToken'])
+
     def build_client(self, service):
         if not self.__role_arn:
             raise Exception("No Role ARN - ClientFactory must be initialized before build_client is called.")
